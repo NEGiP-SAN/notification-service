@@ -4,4 +4,8 @@ version = "0.1.0"
 description = "A backend service for managing and delivering notifications"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi[standard]>=0.143.0",
+    "sqlalchemy[asyncio]>=2.1.4",
+]
