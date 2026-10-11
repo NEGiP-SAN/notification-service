@@ -5,6 +5,7 @@ from sqlalchemy import (
     JSON,
     DateTime,
     Enum,
+    Index,
     Integer,
     String,
     Text,
@@ -81,4 +82,12 @@ class Notification(Base):
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_notifications_recipient_created_at",
+            "recipient",
+            "created_at",
+        ),
     )
