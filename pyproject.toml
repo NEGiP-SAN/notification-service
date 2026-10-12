@@ -11,3 +11,11 @@ dependencies = [
     "python-json-logger>=4.2.0",
     "sqlalchemy[asyncio]>=2.1.4",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/conftest.py" = ["E402"]
