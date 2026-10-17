@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -27,6 +29,35 @@ app = FastAPI(
     debug=settings.debug,
     lifespan=lifespan,
 )
+
+
+# tells you the application process is responding
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "service": settings.app_name,
+    }
+
+
+# checks whether the application can reach PostgreSQL
+@app.get("/health/ready")
+async def readiness(
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        await session.execute(text("SELECT 1"))
+
+    except SQLAlchemyError as err:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database not available",
+        ) from err
+
+    return {
+        "status": "ready",
+        "database": "connected",
+    }
 
 
 @app.post("/notification", response_model=NotificationResponse)
