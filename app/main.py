@@ -60,7 +60,11 @@ async def readiness(
     }
 
 
-@app.post("/notification", response_model=NotificationResponse)
+@app.post(
+    "/notification",
+    response_model=NotificationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_notification(
     payload: NotificationCreate,
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -68,6 +72,29 @@ async def create_notification(
     service = NotificationService(session)
 
     return await service.create_notification(payload)
+
+
+@app.get(
+    "/notification/{notification_id}",
+    response_model=NotificationResponse,
+)
+async def get_notification(
+    notification_id: int,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = NotificationService(session)
+
+    try:
+        notification = await service.get_notification(
+            notification_id=notification_id,
+        )
+        return notification
+
+    except NotificationNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found",
+        )
 
 
 @app.get("/notification", response_model=list[NotificationResponse])
@@ -86,28 +113,6 @@ async def list_notifications(
     )
 
     return notifications
-
-
-@app.get(
-    "/notification/{notification_id}",
-    response_model=NotificationResponse,
-)
-async def get_notification(
-    notification_id: int,
-    session: Annotated[AsyncSession, Depends(get_db)],
-):
-    service = NotificationService(session)
-    try:
-        notification = await service.get_notification(
-            notification_id=notification_id,
-        )
-        return notification
-
-    except NotificationNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Notification not found",
-        )
 
 
 @app.patch("/notification/{notification_id}/read")

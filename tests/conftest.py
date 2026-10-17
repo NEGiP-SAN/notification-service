@@ -13,6 +13,7 @@ if sys.platform == "win32":
 from collections.abc import AsyncGenerator
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -21,7 +22,8 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
-from app.database import Base
+from app.database import Base, get_db
+from app.main import app
 from app.models import Notification  # noqa: F401
 
 pytest_plugins = ["anyio"]
@@ -79,3 +81,21 @@ async def db_session(
         # before attempting to roll it back
         if trans.is_active:
             await trans.rollback()
+
+
+@pytest.fixture
+async def client(
+    db_session: AsyncSession,
+) -> AsyncGenerator[AsyncClient]:
+    async def override_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test.com",
+    ) as async_client:
+        yield async_client
+
+    app.dependency_overrides.clear()
