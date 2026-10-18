@@ -1,0 +1,26 @@
+.git/
+tests/
+alembic
+
+# Environment Variables
+.env
+.env.*
+
+# Database files
+*.sqlite3
+*.db
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+env/
+venv/
+ENV/
+.vscode
