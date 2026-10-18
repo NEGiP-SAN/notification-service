@@ -3,6 +3,8 @@ import sys
 
 from pythonjsonlogger.json import JsonFormatter
 
+from app.core.config import settings
+
 
 def configure_logging() -> None:
     # 1. Decide where log messages are sent
@@ -35,4 +37,4 @@ def configure_logging() -> None:
     # logger.addHandler(file_handler)
 
     # Accept INFO and higher-level messages
-    logger.setLevel(logging.INFO)
+    logger.setLevel(settings.log_level.upper())
