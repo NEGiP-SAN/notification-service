@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import NotificationNotFoundError
+from app.core.logging import configure_logging
 from app.database import engine, get_db
 from app.schemas import (
     NotificationCreate,
@@ -15,13 +17,23 @@ from app.schemas import (
 )
 from app.service import NotificationService
 
+configure_logging()
+
+
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # startup
+    logger.info("Notification service starting")
+
     yield
-    # shutdown
+
+    logger.info("Notification service shutting down")
+
     await engine.dispose()
+
+    logger.info("Database engine disposed")
 
 
 app = FastAPI(
@@ -34,6 +46,8 @@ app = FastAPI(
 # tells you the application process is responding
 @app.get("/health")
 def health():
+    logger.debug("Liveness health check requested")
+
     return {
         "status": "ok",
         "service": settings.app_name,
@@ -49,10 +63,14 @@ async def readiness(
         await session.execute(text("SELECT 1"))
 
     except SQLAlchemyError as err:
+        logger.exception("Database readiness check failed")
+
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database not available",
         ) from err
+
+    logger.info("Database readiness check successful")
 
     return {
         "status": "ready",
@@ -69,9 +87,21 @@ async def create_notification(
     payload: NotificationCreate,
     session: Annotated[AsyncSession, Depends(get_db)],
 ):
+    logger.info(
+        "Notification creation requested",
+        extra={"channel": payload.channel},
+    )
+
     service = NotificationService(session)
 
-    return await service.create_notification(payload)
+    notification = await service.create_notification(payload)
+
+    logger.info(
+        "Notification created successfully",
+        extra={"notification_id": notification.id},
+    )
+
+    return notification
 
 
 @app.get(
@@ -82,19 +112,30 @@ async def get_notification(
     notification_id: int,
     session: Annotated[AsyncSession, Depends(get_db)],
 ):
+    logger.info(
+        "Notification retrieval requested",
+        extra={"notification_id": notification_id},
+    )
+
     service = NotificationService(session)
 
     try:
         notification = await service.get_notification(
             notification_id=notification_id,
         )
+
+        logger.info(
+            "Notification retrieved successfully",
+            extra={"notification_id": notification_id},
+        )
+
         return notification
 
     except NotificationNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notification not found",
-        )
+        ) from None
 
 
 @app.get("/notification", response_model=list[NotificationResponse])
@@ -104,12 +145,26 @@ async def list_notifications(
     limit: Annotated[int, Query(ge=1, le=50)] = 30,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
+    logger.info(
+        "Notification list requested",
+        extra={
+            "recipient": recipient,
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+
     service = NotificationService(session)
 
     notifications = await service.list_notifications(
         recipient=recipient,
         limit=limit,
         offset=offset,
+    )
+
+    logger.info(
+        "Notification list retrieved",
+        extra={"result_count": len(notifications)},
     )
 
     return notifications
@@ -123,12 +178,19 @@ async def mark_notification_as_read(
     service = NotificationService(session)
 
     try:
-        return await service.mark_as_read(
+        notification = await service.mark_as_read(
             notification_id=notification_id,
         )
+
+        logger.info(
+            "Notification marked as read",
+            extra={"notification_id": notification_id},
+        )
+
+        return notification
 
     except NotificationNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notification not found",
-        )
+        ) from None

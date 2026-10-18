@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -5,6 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Notification, NotificationStatus
 from app.schemas import NotificationCreate
+
+# Use DEBUG for database operations in the repo layer,
+# while successful creation/update events are logged
+# at INFO level in the service layer
+logger = logging.getLogger(__name__)
 
 
 class NotificationRepository:
@@ -28,6 +34,11 @@ class NotificationRepository:
         await self.session.flush()
         await self.session.refresh(notification)
 
+        logger.debug(
+            "Notification inserted and refreshed",
+            extra={"notification_id": notification.id},
+        )
+
         return notification
 
     async def get_by_id(
@@ -37,6 +48,14 @@ class NotificationRepository:
         notification = await self.session.get(
             Notification,
             notification_id,
+        )
+
+        logger.debug(
+            "Notification lookup completed",
+            extra={
+                "notification_id": notification_id,
+                "found": notification is not None,
+            },
         )
 
         return notification
@@ -60,6 +79,15 @@ class NotificationRepository:
 
         notifications = result.all()
 
+        logger.debug(
+            "Notification query completed",
+            extra={
+                "result_count": len(notifications),
+                "limit": limit,
+                "offset": offset,
+            },
+        )
+
         return list(notifications)
 
     async def mark_as_read(
@@ -70,5 +98,15 @@ class NotificationRepository:
             notification.read_at = datetime.now(UTC)
 
             await self.session.flush()
+
+            logger.debug(
+                "Notification read_at timestamp updated",
+                extra={"notification_id": notification.id},
+            )
+        else:
+            logger.debug(
+                "Notification was already marked as read",
+                extra={"notification_id": notification.id},
+            )
 
         return notification

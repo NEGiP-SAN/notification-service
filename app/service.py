@@ -1,9 +1,13 @@
+import logging
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotificationNotFoundError
 from app.models import Notification
 from app.repository import NotificationRepository
 from app.schemas import NotificationCreate
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationService:
@@ -16,15 +20,32 @@ class NotificationService:
         data: NotificationCreate,
     ) -> Notification:
         try:
-            notification = await self.repo.create(
-                data=data,
-            )
+            notification = await self.repo.create(data=data)
 
             await self.session.commit()
+
+            logger.debug(
+                "Notification created and transaction committed",
+                extra={
+                    "notification_id": notification.id,
+                    "channel": notification.channel,
+                },
+            )
+
             return notification
 
         except Exception:
-            await self.session.rollback()
+            logger.exception(
+                "Notification creation failed; rolling back",
+            )
+
+            try:
+                await self.session.rollback()
+            except Exception:
+                logger.exception(
+                    "Rollback failed after notification creation failure",
+                )
+
             raise
 
     async def get_notification(
@@ -36,7 +57,16 @@ class NotificationService:
         )
 
         if notification is None:
+            logger.warning(
+                "Notification lookup failed: not found",
+                extra={"notification_id": notification_id},
+            )
             raise NotificationNotFoundError
+
+        logger.debug(
+            "Notification retrieved from repository",
+            extra={"notification_id": notification_id},
+        )
 
         return notification
 
@@ -46,12 +76,18 @@ class NotificationService:
         limit: int,
         offset: int,
     ) -> list[Notification]:
-
-        return await self.repo.list_for_recipient(
+        notifications = await self.repo.list_for_recipient(
             recipient=recipient,
             limit=limit,
             offset=offset,
         )
+
+        logger.debug(
+            "Notification list retrieved from repository",
+            extra={"result_count": len(notifications)},
+        )
+
+        return notifications
 
     async def mark_as_read(
         self,
@@ -63,6 +99,10 @@ class NotificationService:
             )
 
             if notification is None:
+                logger.warning(
+                    "Cannot mark notification as read: Not Found",
+                    extra={"notification_id": notification_id},
+                )
                 raise NotificationNotFoundError
 
             updated = await self.repo.mark_as_read(
@@ -70,8 +110,26 @@ class NotificationService:
             )
 
             await self.session.commit()
+
+            logger.debug(
+                "Notification marked as read and transaction committed",
+                extra={"notification_id": notification_id},
+            )
+
             return updated
 
         except Exception:
-            await self.session.rollback()
+            logger.exception(
+                "Mark-as-read operation failed; rolling back",
+                extra={"notification_id": notification_id},
+            )
+
+            try:
+                await self.session.rollback()
+            except Exception:
+                logger.exception(
+                    "Rollback failed during mark-as-read operation",
+                    extra={"notification_id": notification_id},
+                )
+
             raise
