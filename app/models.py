@@ -86,8 +86,9 @@ class Notification(Base):
 
     __table_args__ = (
         Index(
-            "ix_notifications_recipient_created_at",
+            "ix_notifications_recipient_created_at_id",
             "recipient",
-            "created_at",
+            created_at.desc(),
+            id.desc(),
         ),
     )
