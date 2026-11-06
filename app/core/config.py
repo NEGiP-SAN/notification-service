@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
@@ -12,6 +13,13 @@ class Settings(BaseSettings):
     database_url: str
 
     log_level: str = "info"
+
+    mail_server: str = "localhost"
+    mail_port: int = 587
+    mail_username: str
+    mail_password: SecretStr
+    mail_from: str = "noreply@example.com"
+    mail_use_tls: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",
