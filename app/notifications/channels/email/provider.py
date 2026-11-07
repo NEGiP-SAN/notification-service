@@ -24,6 +24,6 @@ class EmailProvider:
             hostname=settings.mail_server,
             port=settings.mail_port,
             username=settings.mail_username,
-            password=settings.mail_password,
+            password=settings.mail_password.get_secret_value(),
             start_tls=settings.mail_use_tls,
         )
