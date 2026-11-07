@@ -65,6 +65,11 @@ class Notification(Base):
         default=NotificationStatus.PENDING,
     )
 
+    error_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     # "metadata_json" is the attribute name
     # used to access the field in the code
     metadata_json: Mapped[dict | None] = mapped_column(
