@@ -110,3 +110,17 @@ class NotificationRepository:
             )
 
         return notification
+
+    async def update_status(
+        self,
+        notification: Notification,
+        status: NotificationStatus,
+        error_message: str | None = None,
+    ) -> Notification:
+        notification.status = status
+        notification.error_message = error_message
+
+        await self.session.flush()
+        await self.session.refresh(notification)
+
+        return notification
