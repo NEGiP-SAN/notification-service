@@ -7,6 +7,7 @@ from app.notifications.channels.email.service import EmailService
 from app.notifications.models import (
     Notification,
     NotificationChannel,
+    NotificationStatus,
 )
 from app.notifications.repository import NotificationRepository
 from app.notifications.schemas import NotificationCreate
@@ -35,6 +36,8 @@ class NotificationService:
         try:
             notification = await self.repo.create(data=data)
 
+            # Mark notification as processing
+            notification.status = NotificationStatus.PROCESSING
             await self.session.commit()
 
             logger.debug(
@@ -45,13 +48,31 @@ class NotificationService:
                 },
             )
 
-            await self.dispatch(notification)
+            try:
+                await self.dispatch(notification)
+
+                notification.status = NotificationStatus.SENT
+                notification.error_message = None
+
+            except Exception as exc:
+                notification.status = NotificationStatus.FAILED
+                notification.error_message = str(exc)
+
+                logger.exception(
+                    "Notification delivery failed",
+                    extra={
+                        "notification_id": notification.id,
+                        "channel": notification.channel,
+                    },
+                )
+
+            await self.session.commit()
 
             return notification
 
         except Exception:
             logger.exception(
-                "Notification creation failed; rolling back",
+                "Notification operation failed; rolling back",
             )
 
             try:
