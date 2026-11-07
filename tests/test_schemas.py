@@ -3,8 +3,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from pydantic import ValidationError
 
-from app.models import NotificationChannel, NotificationStatus
-from app.schemas import NotificationCreate, NotificationResponse
+from app.notifications.models import NotificationChannel, NotificationStatus
+from app.notifications.schemas import NotificationCreate, NotificationResponse
 
 # ============================================================
 # NotificationCreate Tests

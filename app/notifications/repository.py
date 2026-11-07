@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Notification, NotificationStatus
-from app.schemas import NotificationCreate
+from app.notifications.models import Notification, NotificationStatus
+from app.notifications.schemas import NotificationCreate
 
 # Use DEBUG for database operations in the repo layer,
 # while successful creation/update events are logged

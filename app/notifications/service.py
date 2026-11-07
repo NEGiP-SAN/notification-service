@@ -3,9 +3,9 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotificationNotFoundError
-from app.models import Notification
-from app.repository import NotificationRepository
-from app.schemas import NotificationCreate
+from app.notifications.models import Notification
+from app.notifications.repository import NotificationRepository
+from app.notifications.schemas import NotificationCreate
 
 logger = logging.getLogger(__name__)
 

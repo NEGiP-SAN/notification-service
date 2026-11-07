@@ -6,7 +6,7 @@ from pydantic import (
     Field,
 )
 
-from app.models import (
+from app.notifications.models import (
     NotificationChannel,
     NotificationStatus,
 )

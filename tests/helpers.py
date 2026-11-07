@@ -2,11 +2,11 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import (
+from app.notifications.models import (
     Notification,
     NotificationChannel,
 )
-from app.schemas import NotificationCreate
+from app.notifications.schemas import NotificationCreate
 
 
 def make_notification_data(

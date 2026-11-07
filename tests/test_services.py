@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotificationNotFoundError
-from app.service import NotificationService
+from app.notifications.service import NotificationService
 from tests.helpers import (
     create_notification,
     make_notification_data,

@@ -8,8 +8,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
-from app.database import Base
-from app.models import Notification  # noqa: F401
+from app.db.database import Base
+from app.notifications.models import Notification  # noqa: F401
 
 # Windows-specific asyncio configuration
 if sys.platform == "win32":

@@ -2,20 +2,15 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import NotificationNotFoundError
 from app.core.logging import configure_logging
-from app.database import engine, get_db
-from app.schemas import (
-    NotificationCreate,
-    NotificationResponse,
-)
-from app.service import NotificationService
+from app.db.database import engine, get_db
+from app.notifications.router import router
 
 configure_logging()
 
@@ -41,6 +36,8 @@ app = FastAPI(
     debug=settings.debug,
     lifespan=lifespan,
 )
+
+app.include_router(router)
 
 
 # tells you the application process is responding
@@ -76,121 +73,3 @@ async def readiness(
         "status": "ready",
         "database": "connected",
     }
-
-
-@app.post(
-    "/notification",
-    response_model=NotificationResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_notification(
-    payload: NotificationCreate,
-    session: Annotated[AsyncSession, Depends(get_db)],
-):
-    logger.info(
-        "Notification creation requested",
-        extra={"channel": payload.channel},
-    )
-
-    service = NotificationService(session)
-
-    notification = await service.create_notification(payload)
-
-    logger.info(
-        "Notification created successfully",
-        extra={"notification_id": notification.id},
-    )
-
-    return notification
-
-
-@app.get(
-    "/notification/{notification_id}",
-    response_model=NotificationResponse,
-)
-async def get_notification(
-    notification_id: int,
-    session: Annotated[AsyncSession, Depends(get_db)],
-):
-    logger.info(
-        "Notification retrieval requested",
-        extra={"notification_id": notification_id},
-    )
-
-    service = NotificationService(session)
-
-    try:
-        notification = await service.get_notification(
-            notification_id=notification_id,
-        )
-
-        logger.info(
-            "Notification retrieved successfully",
-            extra={"notification_id": notification_id},
-        )
-
-        return notification
-
-    except NotificationNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Notification not found",
-        ) from None
-
-
-@app.get("/notification", response_model=list[NotificationResponse])
-async def list_notifications(
-    session: Annotated[AsyncSession, Depends(get_db)],
-    recipient: Annotated[str, Query(min_length=1, max_length=90)],
-    limit: Annotated[int, Query(ge=1, le=50)] = 30,
-    offset: Annotated[int, Query(ge=0)] = 0,
-):
-    logger.info(
-        "Notification list requested",
-        extra={
-            "recipient": recipient,
-            "limit": limit,
-            "offset": offset,
-        },
-    )
-
-    service = NotificationService(session)
-
-    notifications = await service.list_notifications(
-        recipient=recipient,
-        limit=limit,
-        offset=offset,
-    )
-
-    logger.info(
-        "Notification list retrieved",
-        extra={"result_count": len(notifications)},
-    )
-
-    return notifications
-
-
-@app.patch("/notification/{notification_id}/read")
-async def mark_notification_as_read(
-    notification_id: int,
-    session: Annotated[AsyncSession, Depends(get_db)],
-):
-    service = NotificationService(session)
-
-    try:
-        notification = await service.mark_as_read(
-            notification_id=notification_id,
-        )
-
-        logger.info(
-            "Notification marked as read",
-            extra={"notification_id": notification_id},
-        )
-
-        return notification
-
-    except NotificationNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Notification not found",
-        ) from None

@@ -22,9 +22,9 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
-from app.database import Base, get_db
+from app.db.database import Base, get_db
 from app.main import app
-from app.models import Notification  # noqa: F401
+from app.notifications.models import Notification  # noqa: F401
 
 pytest_plugins = ["anyio"]
 

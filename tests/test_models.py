@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.models import (
+from app.notifications.models import (
     Notification,
     NotificationChannel,
     NotificationStatus,

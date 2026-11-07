@@ -2,10 +2,10 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.models import (
+from app.notifications.models import (
     NotificationStatus,
 )
-from app.repository import NotificationRepository
+from app.notifications.repository import NotificationRepository
 from tests.helpers import (
     create_notification,
     make_notification_data,
