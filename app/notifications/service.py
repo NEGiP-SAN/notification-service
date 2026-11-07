@@ -3,7 +3,11 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotificationNotFoundError
-from app.notifications.models import Notification
+from app.notifications.channels.email.service import EmailService
+from app.notifications.models import (
+    Notification,
+    NotificationChannel,
+)
 from app.notifications.repository import NotificationRepository
 from app.notifications.schemas import NotificationCreate
 
@@ -14,6 +18,15 @@ class NotificationService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.repo = NotificationRepository(session)
+
+        self.email_service = EmailService()
+        # self.sms_service = SMSService()
+        # self.push_service = PushService()
+        # self.in_app_service = InAppService()
+
+    async def dispatch(self, notification: Notification):
+        if notification.channel == NotificationChannel.EMAIL:
+            await self.email_service.send(notification)
 
     async def create_notification(
         self,
@@ -31,6 +44,8 @@ class NotificationService:
                     "channel": notification.channel,
                 },
             )
+
+            await self.dispatch(notification)
 
             return notification
 
