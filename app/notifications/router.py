@@ -27,6 +27,18 @@ router = APIRouter(
 )
 
 
+def get_notification_service(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> NotificationService:
+    return NotificationService(session)
+
+
+NotificationServiceDep = Annotated[
+    NotificationService,
+    Depends(get_notification_service),
+]
+
+
 @router.post(
     "",
     response_model=NotificationResponse,
@@ -34,14 +46,12 @@ router = APIRouter(
 )
 async def create_notification(
     payload: NotificationCreate,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    service: NotificationServiceDep,
 ):
     logger.info(
         "Notification creation requested",
         extra={"channel": payload.channel},
     )
-
-    service = NotificationService(session)
 
     notification = await service.create_notification(payload)
 
@@ -59,14 +69,12 @@ async def create_notification(
 )
 async def get_notification(
     notification_id: int,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    service: NotificationServiceDep,
 ):
     logger.info(
         "Notification retrieval requested",
         extra={"notification_id": notification_id},
     )
-
-    service = NotificationService(session)
 
     try:
         notification = await service.get_notification(
@@ -92,7 +100,7 @@ async def get_notification(
     response_model=list[NotificationResponse],
 )
 async def list_notifications(
-    session: Annotated[AsyncSession, Depends(get_db)],
+    service: NotificationServiceDep,
     recipient: Annotated[str, Query(min_length=1, max_length=90)],
     limit: Annotated[int, Query(ge=1, le=50)] = 30,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -105,8 +113,6 @@ async def list_notifications(
             "offset": offset,
         },
     )
-
-    service = NotificationService(session)
 
     notifications = await service.list_notifications(
         recipient=recipient,
@@ -128,10 +134,8 @@ async def list_notifications(
 )
 async def mark_notification_as_read(
     notification_id: int,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    service: NotificationServiceDep,
 ):
-    service = NotificationService(session)
-
     try:
         notification = await service.mark_as_read(
             notification_id=notification_id,
