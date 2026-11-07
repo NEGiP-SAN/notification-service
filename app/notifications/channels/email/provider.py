@@ -11,7 +11,7 @@ class EmailProvider:
         recipient: str,
         subject: str,
         body: str,
-    ):
+    ) -> None:
         message = EmailMessage()
 
         message["From"] = settings.mail_from
