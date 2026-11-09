@@ -1,10 +1,14 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from aiosmtplib import SMTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotificationNotFoundError
-from app.notifications.models import NotificationChannel
+from app.notifications.models import (
+    NotificationChannel,
+    NotificationStatus,
+)
 from app.notifications.service import NotificationService
 from tests.helpers import (
     create_notification,
@@ -19,8 +23,16 @@ from tests.helpers import (
 @pytest.mark.anyio
 async def test_create_notification_success(
     db_session,
+    monkeypatch,
 ):
     service = NotificationService(db_session)
+
+    mock_send = AsyncMock()
+    monkeypatch.setattr(
+        service.email_service,
+        "send",
+        mock_send,
+    )
 
     data = make_notification_data(
         recipient="test-user",
@@ -35,6 +47,8 @@ async def test_create_notification_success(
     assert notification.recipient == "test-user"
     assert notification.title == "Test notification"
     assert notification.body == "Test body"
+    assert notification.status == NotificationStatus.SENT
+    assert notification.error_message is None
 
 
 @pytest.mark.anyio
@@ -48,7 +62,11 @@ async def test_create_notification_rolls_back_on_failure(
     service = NotificationService(session)
 
     mock_send = AsyncMock()
-    monkeypatch.setattr(service.email_service, "send", mock_send)
+    monkeypatch.setattr(
+        service.email_service,
+        "send",
+        mock_send,
+    )
 
     # side_effect tells a mock what to do when it is called
     # It can raise an exception, return different values,
@@ -91,6 +109,38 @@ async def test_create_notification_dispatches_email(
     )
 
     notification = await service.create_notification(data)
+
+    mock_send.assert_awaited_once_with(notification)
+
+
+@pytest.mark.anyio
+async def test_create_notification_delivery_failure(
+    db_session,
+    monkeypatch,
+):
+    service = NotificationService(db_session)
+
+    mock_send = AsyncMock(
+        side_effect=SMTPException("SMTP Error"),
+    )
+    monkeypatch.setattr(
+        service.email_service,
+        "send",
+        mock_send,
+    )
+
+    data = make_notification_data(
+        recipient="test@example.com",
+        channel=NotificationChannel.EMAIL,
+        title="Test notification",
+        body="Test body",
+    )
+
+    notification = await service.create_notification(data)
+
+    assert notification.id is not None
+    assert notification.status == NotificationStatus.FAILED
+    assert notification.error_message == "SMTP Error"
 
     mock_send.assert_awaited_once_with(notification)
 
