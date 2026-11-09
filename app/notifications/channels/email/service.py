@@ -1,7 +1,5 @@
 import logging
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.notifications.channels.email.provider import EmailProvider
 from app.notifications.models import Notification
 
@@ -9,8 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class EmailService:
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    def __init__(self):
         self.provider = EmailProvider()
 
     async def send(self, notification: Notification) -> None:

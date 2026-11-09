@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from aiosmtplib import SMTPException
 
 from app.notifications.channels.email import provider
 from app.notifications.channels.email.provider import EmailProvider
@@ -31,13 +32,17 @@ async def test_send_email(monkeypatch):
 @pytest.mark.anyio
 async def test_send_email_failure(monkeypatch):
     mock_send = AsyncMock(
-        side_effect=provider.aiosmtplib.SMTPException("SMTP error"),
+        side_effect=SMTPException("SMTP error"),
     )
-    monkeypatch.setattr(provider.aiosmtplib, "send", mock_send)
+    monkeypatch.setattr(
+        provider.aiosmtplib,
+        "send",
+        mock_send,
+    )
 
     email_provider = EmailProvider()
 
-    with pytest.raises(provider.aiosmtplib.SMTPException):
+    with pytest.raises(SMTPException, match="SMTP error"):
         await email_provider.send_email(
             recipient="test@example.com",
             subject="Test subject",
