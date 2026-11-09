@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotificationNotFoundError
+from app.notifications.models import NotificationChannel
 from app.notifications.service import NotificationService
 from tests.helpers import (
     create_notification,
@@ -16,31 +17,38 @@ from tests.helpers import (
 
 
 @pytest.mark.anyio
-async def test_create_notificiation_success(
+async def test_create_notification_success(
     db_session,
 ):
     service = NotificationService(db_session)
 
     data = make_notification_data(
         recipient="test-user",
-        title="Welcome!",
-        body="Welcome to our Application",
+        channel=NotificationChannel.EMAIL,
+        title="Test notification",
+        body="Test body",
     )
 
     notification = await service.create_notification(data)
 
     assert notification.id is not None
     assert notification.recipient == "test-user"
-    assert notification.title == "Welcome!"
-    assert notification.body == "Welcome to our Application"
+    assert notification.title == "Test notification"
+    assert notification.body == "Test body"
 
 
 @pytest.mark.anyio
-async def test_create_notification_rolls_back_on_failure():
+async def test_create_notification_rolls_back_on_failure(
+    monkeypatch,
+):
     # spec restricts a mock to attributes
     # and methods available on a particular class
     session = AsyncMock(spec=AsyncSession)
+
     service = NotificationService(session)
+
+    mock_send = AsyncMock()
+    monkeypatch.setattr(service.email_service, "send", mock_send)
 
     # side_effect tells a mock what to do when it is called
     # It can raise an exception, return different values,
@@ -56,6 +64,35 @@ async def test_create_notification_rolls_back_on_failure():
 
     session.rollback.assert_awaited_once()
     session.commit.assert_not_awaited()
+
+    mock_send.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_create_notification_dispatches_email(
+    db_session,
+    monkeypatch,
+):
+    service = NotificationService(db_session)
+
+    mock_send = AsyncMock()
+
+    monkeypatch.setattr(
+        service.email_service,
+        "send",
+        mock_send,
+    )
+
+    data = make_notification_data(
+        recipient="test@example.com",
+        channel=NotificationChannel.EMAIL,
+        title="Test notification",
+        body="Test body",
+    )
+
+    notification = await service.create_notification(data)
+
+    mock_send.assert_awaited_once_with(notification)
 
 
 # =====================================================
