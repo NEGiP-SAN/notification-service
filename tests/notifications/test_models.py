@@ -124,3 +124,4 @@ async def test_notification_nullable_fields(db_session):
     assert saved_notification is not None
     assert saved_notification.metadata_json is None
     assert saved_notification.read_at is None
+    assert saved_notification.error_message is None

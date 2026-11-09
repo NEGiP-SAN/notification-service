@@ -20,7 +20,7 @@ class NotificationService:
         self.session = session
         self.repo = NotificationRepository(session)
 
-        self.email_service = EmailService(session)
+        self.email_service = EmailService()
         # self.sms_service = SMSService()
         # self.push_service = PushService()
         # self.in_app_service = InAppService()

@@ -21,7 +21,7 @@ async def test_create_notification_success(client):
     )
 
     response = await client.post(
-        "/notification",
+        "/notifications",
         json=notification.model_dump(mode="json"),
     )
 
@@ -36,7 +36,7 @@ async def test_create_notification_success(client):
 @pytest.mark.anyio
 async def test_create_notification_invalid_payload(client):
     response = await client.post(
-        "/notification",
+        "/notifications",
         json={},
     )
 
@@ -59,7 +59,7 @@ async def test_get_notification_success(client, db_session):
     notification_id = notification.id
 
     response = await client.get(
-        f"/notification/{notification_id}",
+        f"/notifications/{notification_id}",
     )
 
     assert response.status_code == status.HTTP_200_OK
@@ -73,7 +73,7 @@ async def test_get_notification_success(client, db_session):
 
 @pytest.mark.anyio
 async def test_get_notification_not_found(client):
-    response = await client.get("/notification/3")
+    response = await client.get("/notifications/3")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -96,7 +96,7 @@ async def test_list_notifications_success(client, db_session):
     )
 
     response = await client.get(
-        "/notification",
+        "/notifications",
         params={
             "recipient": "test-user",
             "limit": 10,
@@ -135,7 +135,7 @@ async def test_list_notification_filters_by_recipient(
     )
 
     response = await client.get(
-        "/notification",
+        "/notifications",
         params={
             "recipient": "recipient-a",
             "limit": 10,
@@ -196,7 +196,7 @@ async def test_list_notification_sorts_newest_first(
     )
 
     response = await client.get(
-        "/notification",
+        "/notifications",
         params={
             "recipient": "random-user",
             "limit": 10,
@@ -217,7 +217,7 @@ async def test_list_notification_sorts_newest_first(
 @pytest.mark.anyio
 async def test_list_notifications_empty_notification(client):
     response = await client.get(
-        "/notification",
+        "/notifications",
         params={
             "recipient": "random-user",
             "limit": 10,
@@ -231,7 +231,7 @@ async def test_list_notifications_empty_notification(client):
 
 @pytest.mark.anyio
 async def test_list_notifications_missing_params(client):
-    response = await client.get("/notification")
+    response = await client.get("/notifications")
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -239,7 +239,7 @@ async def test_list_notifications_missing_params(client):
 @pytest.mark.anyio
 async def test_list_notifications_recipient_too_long(client):
     response = await client.get(
-        "/notification",
+        "/notifications",
         params={
             "recipient": "a" * 91,
             "limit": 10,
@@ -253,7 +253,7 @@ async def test_list_notifications_recipient_too_long(client):
 @pytest.mark.anyio
 async def test_list_notifications_invalid_limit(client):
     response = await client.get(
-        "/notification",
+        "/notifications",
         params={
             "recipient": "random-user",
             "limit": 100,
@@ -267,7 +267,7 @@ async def test_list_notifications_invalid_limit(client):
 @pytest.mark.anyio
 async def test_list_notifications_invalid_offset(client):
     response = await client.get(
-        "/notification",
+        "/notifications",
         params={
             "recipient": "random-user",
             "limit": 10,
@@ -296,7 +296,7 @@ async def test_mark_notification_as_read_success(client, db_session):
     assert notification.read_at is None
 
     response = await client.patch(
-        f"/notification/{notification_id}/read",
+        f"/notifications/{notification_id}/read",
     )
 
     assert response.status_code == status.HTTP_200_OK
@@ -312,7 +312,7 @@ async def test_mark_notification_as_read_success(client, db_session):
 @pytest.mark.anyio
 async def test_mark_notification_as_read_not_found(client):
 
-    response = await client.patch("/notification/3/read")
+    response = await client.patch("/notifications/3/read")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
