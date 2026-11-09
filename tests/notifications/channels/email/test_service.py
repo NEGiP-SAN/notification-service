@@ -8,19 +8,10 @@ from app.notifications.models import Notification
 
 
 @pytest.mark.anyio
-async def test_send_email_success(
-    db_session,
-    monkeypatch,
-):
-    service = EmailService(db_session)
+async def test_send_email_success():
+    mock_provider = AsyncMock()
 
-    mock_send = AsyncMock()
-
-    monkeypatch.setattr(
-        service.provider,
-        "send_email",
-        mock_send,
-    )
+    service = EmailService(mock_provider)
 
     notification = Notification(
         recipient="test@example.com",
@@ -30,7 +21,7 @@ async def test_send_email_success(
 
     await service.send(notification)
 
-    mock_send.assert_awaited_once_with(
+    mock_provider.send_email.assert_awaited_once_with(
         recipient="test@example.com",
         subject="Test title",
         body="Test body",
@@ -38,21 +29,12 @@ async def test_send_email_success(
 
 
 @pytest.mark.anyio
-async def test_send_email_failure(
-    db_session,
-    monkeypatch,
-):
-    service = EmailService(db_session)
+async def test_send_email_failure():
+    mock_provider = AsyncMock()
 
-    mock_send = AsyncMock(
-        side_effect=SMTPException("SMTP error"),
-    )
+    mock_provider.send_email.side_effect = SMTPException("SMTP error")
 
-    monkeypatch.setattr(
-        service.provider,
-        "send_email",
-        mock_send,
-    )
+    service = EmailService(mock_provider)
 
     notification = Notification(
         recipient="test@example.com",
@@ -62,3 +44,9 @@ async def test_send_email_failure(
 
     with pytest.raises(SMTPException, match="SMTP error"):
         await service.send(notification)
+
+    mock_provider.send_email.assert_awaited_once_with(
+        recipient="test@example.com",
+        subject="Test title",
+        body="Test body",
+    )

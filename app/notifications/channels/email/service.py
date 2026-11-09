@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 class EmailService:
-    def __init__(self):
-        self.provider = EmailProvider()
+    def __init__(self, provider: EmailProvider | None = None):
+        self.provider = provider or EmailProvider()
 
     async def send(self, notification: Notification) -> None:
         await self.provider.send_email(
