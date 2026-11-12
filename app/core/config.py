@@ -14,6 +14,8 @@ class Settings(BaseSettings):
 
     log_level: str = "info"
 
+    redis_url: str
+
     mail_server: str = "localhost"
     mail_port: int = 587
     mail_username: str
