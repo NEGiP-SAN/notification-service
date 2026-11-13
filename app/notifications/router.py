@@ -17,6 +17,7 @@ from app.notifications.schemas import (
     NotificationResponse,
 )
 from app.notifications.service import NotificationService
+from app.workers.tasks import send_notification_task
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,11 @@ async def create_notification(
         extra={"channel": payload.channel},
     )
 
+    # Create and persist notification
     notification = await service.create_notification(payload)
+
+    # Schedule background delivery
+    send_notification_task.delay(notification.id)
 
     logger.info(
         "Notification created successfully",

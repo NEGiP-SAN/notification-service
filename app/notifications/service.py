@@ -10,7 +10,7 @@ from app.notifications.models import (
 )
 from app.notifications.repository import NotificationRepository
 from app.notifications.schemas import NotificationCreate
-from app.workers.celery_app import celery_app
+# from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +46,10 @@ class NotificationService:
                 },
             )
 
-            celery_app.send_task(
-                "send_notification",
-                args=[notification.id],
-            )
+            # celery_app.send_task(
+            #     "send_notification",
+            #     args=[notification.id],
+            # )
 
             return notification
 
