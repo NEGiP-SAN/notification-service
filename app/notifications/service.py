@@ -7,10 +7,10 @@ from app.notifications.channels.email.service import EmailService
 from app.notifications.models import (
     Notification,
     NotificationChannel,
-    NotificationStatus,
 )
 from app.notifications.repository import NotificationRepository
 from app.notifications.schemas import NotificationCreate
+from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -36,52 +36,29 @@ class NotificationService:
         try:
             notification = await self.repo.create(data=data)
 
-            # Mark notification as processing
-            notification.status = NotificationStatus.PROCESSING
             await self.session.commit()
 
             logger.debug(
-                "Notification created and transaction committed",
+                "Notification created successfully",
                 extra={
                     "notification_id": notification.id,
                     "channel": notification.channel,
                 },
             )
 
-            try:
-                await self.dispatch(notification)
-
-                notification.status = NotificationStatus.SENT
-                notification.error_message = None
-
-            except Exception as exc:
-                notification.status = NotificationStatus.FAILED
-                notification.error_message = str(exc)
-
-                logger.exception(
-                    "Notification delivery failed",
-                    extra={
-                        "notification_id": notification.id,
-                        "channel": notification.channel,
-                    },
-                )
-
-            await self.session.commit()
+            celery_app.send_task(
+                "send_notification",
+                args=[notification.id],
+            )
 
             return notification
 
         except Exception:
             logger.exception(
-                "Notification operation failed; rolling back",
+                "Notification creation failed; rolling back",
             )
 
-            try:
-                await self.session.rollback()
-            except Exception:
-                logger.exception(
-                    "Rollback failed after notification creation failure",
-                )
-
+            await self.session.rollback()
             raise
 
     async def get_notification(
