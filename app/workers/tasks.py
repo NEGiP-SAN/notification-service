@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 
 from app.notifications.models import NotificationStatus
 from app.notifications.service import NotificationService
@@ -7,6 +8,12 @@ from app.workers.celery_app import celery_app
 from app.workers.database import CelerySessionLocal
 
 logger = logging.getLogger(__name__)
+
+# Windows-specific asyncio configuration
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(
+        asyncio.WindowsSelectorEventLoopPolicy(),
+    )
 
 
 async def process_notification(notification_id: int):
