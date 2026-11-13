@@ -1,8 +1,11 @@
 from datetime import UTC, datetime, timedelta
+from unittest.mock import Mock
 
 import pytest
 from fastapi import status
 
+from app.notifications.models import NotificationStatus
+from app.notifications.router import send_notification_task
 from tests.helpers import (
     create_notification,
     make_notification_data,
@@ -14,7 +17,17 @@ from tests.helpers import (
 
 
 @pytest.mark.anyio
-async def test_create_notification_success(client):
+async def test_create_notification_success(
+    client,
+    monkeypatch,
+):
+    mock_task = Mock()
+    monkeypatch.setattr(
+        send_notification_task,
+        "delay",
+        mock_task,
+    )
+
     notification = make_notification_data(
         recipient="test-user",
         title="Welcome Message",
@@ -31,6 +44,9 @@ async def test_create_notification_success(client):
 
     assert data["recipient"] == "test-user"
     assert data["title"] == "Welcome Message"
+    assert data["status"] == NotificationStatus.PENDING
+
+    mock_task.assert_called_once_with(data["id"])
 
 
 @pytest.mark.anyio
@@ -44,7 +60,7 @@ async def test_create_notification_invalid_payload(client):
 
 
 # ============================================================
-#  List Notifications Route Tests
+#   Get Notification Route Tests
 # ============================================================
 
 

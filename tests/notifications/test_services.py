@@ -16,23 +16,74 @@ from tests.helpers import (
 )
 
 # =====================================================
-#  Create Notification Service Test
+#  Dispatch Notification Service Test
 # =====================================================
 
 
 @pytest.mark.anyio
-async def test_create_notification_success(
+async def test_dispatch_email_success(
     db_session,
     monkeypatch,
 ):
     service = NotificationService(db_session)
 
     mock_send = AsyncMock()
+
     monkeypatch.setattr(
         service.email_service,
         "send",
         mock_send,
     )
+
+    notification = await create_notification(
+        db_session,
+        recipient="test-user",
+        channel=NotificationChannel.EMAIL,
+        title="Test Notification",
+    )
+
+    await service.dispatch(notification)
+
+    mock_send.assert_awaited_once_with(notification)
+
+
+@pytest.mark.anyio
+async def test_dispatch_email_failure(
+    db_session,
+    monkeypatch,
+):
+    service = NotificationService(db_session)
+
+    mock_send = AsyncMock(
+        side_effect=SMTPException("SMTP Error"),
+    )
+    monkeypatch.setattr(
+        service.email_service,
+        "send",
+        mock_send,
+    )
+
+    notification = await create_notification(
+        db_session,
+        recipient="test-user",
+        channel=NotificationChannel.EMAIL,
+        title="Test Notification",
+    )
+
+    with pytest.raises(SMTPException, match="SMTP Error"):
+        await service.dispatch(notification)
+
+    mock_send.assert_awaited_once_with(notification)
+
+
+# =====================================================
+#  Create Notification Service Test
+# =====================================================
+
+
+@pytest.mark.anyio
+async def test_create_notification_success(db_session):
+    service = NotificationService(db_session)
 
     data = make_notification_data(
         recipient="test-user",
@@ -47,7 +98,7 @@ async def test_create_notification_success(
     assert notification.recipient == "test-user"
     assert notification.title == "Test notification"
     assert notification.body == "Test body"
-    assert notification.status == NotificationStatus.SENT
+    assert notification.status == NotificationStatus.PENDING
     assert notification.error_message is None
 
 
@@ -84,65 +135,6 @@ async def test_create_notification_rolls_back_on_failure(
     session.commit.assert_not_awaited()
 
     mock_send.assert_not_awaited()
-
-
-@pytest.mark.anyio
-async def test_create_notification_dispatches_email(
-    db_session,
-    monkeypatch,
-):
-    service = NotificationService(db_session)
-
-    mock_send = AsyncMock()
-
-    monkeypatch.setattr(
-        service.email_service,
-        "send",
-        mock_send,
-    )
-
-    data = make_notification_data(
-        recipient="test@example.com",
-        channel=NotificationChannel.EMAIL,
-        title="Test notification",
-        body="Test body",
-    )
-
-    notification = await service.create_notification(data)
-
-    mock_send.assert_awaited_once_with(notification)
-
-
-@pytest.mark.anyio
-async def test_create_notification_delivery_failure(
-    db_session,
-    monkeypatch,
-):
-    service = NotificationService(db_session)
-
-    mock_send = AsyncMock(
-        side_effect=SMTPException("SMTP Error"),
-    )
-    monkeypatch.setattr(
-        service.email_service,
-        "send",
-        mock_send,
-    )
-
-    data = make_notification_data(
-        recipient="test@example.com",
-        channel=NotificationChannel.EMAIL,
-        title="Test notification",
-        body="Test body",
-    )
-
-    notification = await service.create_notification(data)
-
-    assert notification.id is not None
-    assert notification.status == NotificationStatus.FAILED
-    assert notification.error_message == "SMTP Error"
-
-    mock_send.assert_awaited_once_with(notification)
 
 
 # =====================================================
