@@ -5,6 +5,7 @@ from app.core.config import settings
 celery_app = Celery(
     "notification_service",
     broker=settings.redis_url,
+    include=["app.workers.tasks"]
 )
 
 celery_app.conf.update(
